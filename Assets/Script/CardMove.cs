@@ -1,80 +1,69 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
-public class CardMove : MonoBehaviour
+public class CardMove : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDragHandler
 {
-    private Vector3 _move;
-    private bool _beRay = false;
-    private GameObject _card;
-    [SerializeField] Camera _camera;
-    [SerializeField] GameObject _setPos;
+    // 親
+    public Transform _parent;
 
+    // ゲームマネージャ
+    private GameObject _card;
+
+    // カードデータ
+    private CardData _cardData;
+
+    // 座標
+    private Vector2 _posOrizin;
+
+    // 移動フラグ
+    private bool _moveFlag;
+
+    // ゲームマネージャ
+    private CardManager _cardManager;
+
+    
+    // コンストラクタ
     private void Start()
     {
-        _camera = Camera.main;
+        GameObject gameObject = GameObject.FindWithTag( "CardManager" );
+
+        _cardManager = gameObject.GetComponent<CardManager>();
+        _cardData = this.GetComponent<CardData>();
+        _posOrizin = this.transform.localPosition;
+        _moveFlag = false;
     }
 
 
-    // アップデート
-    private void Update()
+    // ドラッグし始めた瞬間
+    public void OnBeginDrag( PointerEventData eventData )
     {
-        if( Input.GetMouseButtonDown( 0 ) )
+        if( this.transform.parent.tag == "Field" )
         {
-            RayCheck();
+            return;
         }
 
-        if( _beRay )
-        {
-            MovePos();
-        }
-        else
-        {
-            SetCard();
-        }
+        _moveFlag = ( _cardData._team == _cardManager._nowTurn );
 
-        if( Input.GetMouseButtonUp( 0 ) )
-        {
-            _beRay = false;
-        }
+        _parent = this.transform.parent;
+        transform.SetParent( _parent.parent, false );
+
+        GetComponent<CanvasGroup>().blocksRaycasts = !_moveFlag;
     }
 
 
-    // rayチェック
-    private void RayCheck()
+    // ドラッグ中
+    public void OnDrag( PointerEventData eventData )
     {
-        Ray ray = new Ray();
-        RaycastHit hit = new RaycastHit();
-
-        ray = Camera.main.ScreenPointToRay( Input.mousePosition );
-
-        if( Physics.Raycast( ray, out hit ) )
-        {
-            _card = hit.collider.gameObject;
-            _beRay = true;
-        }
-
-        if( _card == null )
-        {
-            _beRay = false;
-        }
+        this.transform.position = eventData.position;
     }
 
 
-    // 座標移動
-    private void MovePos()
+    // ドラッグ終了した瞬間
+    public void OnEndDrag( PointerEventData eventData )
     {
-        Vector3 mousePos = Input.mousePosition;
-        mousePos.z = _camera.transform.position.y;
-
-        _move = Camera.main.ScreenToWorldPoint( mousePos );
-        _card.transform.position = _move;
-    }
-
-
-    // カード固定
-    private void SetCard()
-    {
-        
+        transform.SetParent( _parent, false );
+        GetComponent<CanvasGroup>().blocksRaycasts = true;
     }
 }

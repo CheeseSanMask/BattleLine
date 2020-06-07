@@ -3,7 +3,14 @@
 --- !u!78 &1
 TagManager:
   serializedVersion: 2
-  tags: []
+  tags:
+  - CardManager
+  - Opponent
+  - FlagManager
+  - SceneManager
+  - Save
+  - Hand
+  - Field
   layers:
   - Default
   - TransparentFX
