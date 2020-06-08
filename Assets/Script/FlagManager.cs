@@ -73,8 +73,8 @@ public class FlagManager : MonoBehaviour
             if( _flagCount[num] == _flagNum/2+1 )
             {
                 _winTeam = (Team)num;
-                _save.SaveBattleData();
-                _save.LoadBattleData();
+                //_save.SaveBattleData();
+                //_save.LoadBattleData();
                 UnityEngine.SceneManagement.SceneManager.LoadScene( "ResultScene" );
             }
         }

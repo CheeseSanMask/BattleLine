@@ -33,6 +33,11 @@ public class FlagGet : MonoBehaviour
             {
                 _cardCheckPlayer = field[num].GetComponent<CardCheck>();
             }
+
+            if( field[num].name == "OpponentField"+number )
+            {
+                _cardCheckOpponent = field[num].GetComponent<CardCheck>();
+            }
         }
 
         _flagManager = GameObject.FindGameObjectWithTag( "FlagManager" ).GetComponent<FlagManager>();

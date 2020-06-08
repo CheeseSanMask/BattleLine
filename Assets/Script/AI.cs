@@ -19,6 +19,9 @@ public class AI : MonoBehaviour
     // 対戦相手の手札の位置
     private GameObject[] _opponentFields;
 
+    // カードを置けるフィールド数
+    private int _ableFieldNum;
+
     // カードマネージャ
     private CardManager _cardManager;
 
@@ -46,9 +49,21 @@ public class AI : MonoBehaviour
     {
         if( _opponentFields == null )
         {
-            _opponentFields = new GameObject[_flagManager._flagNum];
-            _targetField    = new Transform[_flagManager._flagNum];
+            _ableFieldNum = _flagManager._flagNum;
+            _opponentFields = new GameObject[_ableFieldNum];
+            _targetField    = new Transform[_cardManager.GetCardHandNum()];
             _opponentCardPriority  = new int[_cardManager.GetCardHandNum()];
+
+            for( int num = 0; num < _opponentFields.Length; num++ )
+            {
+                _opponentFields[num] = GameObject.Find( "OpponentField"+( num+1 ) );
+            }
+        }
+
+        for( int num = 0; num < _targetField.Length; num++ )
+        {
+            _targetField[num] = this.transform;
+            _opponentCardPriority[num] = 0;
         }
     }
 
@@ -59,14 +74,6 @@ public class AI : MonoBehaviour
         if( _cardManager._nowTurn == Team.Opponent )
         {
             Init();
-
-            for( int num = 0; num < _flagManager._flagNum; num++ )
-            {
-                _opponentFields[num] = GameObject.Find( "OpponentField"+( num+1 ) );
-                _targetField[num]    = this.transform;
-                _opponentCardPriority[num]  = 0;
-            }
-
             SetPriority();
             ChooseCard();
         }
@@ -82,7 +89,7 @@ public class AI : MonoBehaviour
 
             if ( cardDatas.Length == 0 )
             {
-                SetPriorityCardNon( num );
+                SetPriorityCardNon();
             }
             else if( cardDatas.Length == 1 )
             {
@@ -97,7 +104,7 @@ public class AI : MonoBehaviour
 
 
     // フィールドに0枚
-    private void SetPriorityCardNon( int number )
+    private void SetPriorityCardNon()
     {
         int tmpNum = 0;
 
@@ -109,15 +116,14 @@ public class AI : MonoBehaviour
             }
         }
 
-        _opponentCardPriority[number] += 1;
+        _opponentCardPriority[tmpNum] += 1;
+        _targetField[tmpNum] = _opponentFields[0].transform;
     }
 
 
     // フィールドに1枚
     private void SetPriorityCardOne( CardData cardData )
     {
-        string parentName = cardData.transform.parent.name.Remove( 0, 13 );
-        int fieldNum = int.Parse( parentName );
         Transform fieldParent = cardData.transform.parent;
 
         for( int num = 0; num < _opponentCards.Length; num++ )
@@ -126,26 +132,26 @@ public class AI : MonoBehaviour
             ||  ( cardData._number == _opponentCards[num]._number+1 )
             ){
                 _opponentCardPriority[num] += 25;
-                _opponentFields[fieldNum]   = fieldParent.gameObject;
+                _targetField[num] = fieldParent;
             }
 
             if( cardData._number == _opponentCards[num]._number )
             {
                 _opponentCardPriority[num] += 20;
-                _opponentFields[fieldNum]   = fieldParent.gameObject;
+                _targetField[num] = fieldParent;
             }
 
             if( ( cardData._number == _opponentCards[num]._number-2 )
             ||  ( cardData._number == _opponentCards[num]._number+2 )
             ){
                 _opponentCardPriority[num] += 10;
-                _opponentFields[fieldNum]   = fieldParent.gameObject;
+                _targetField[num] = fieldParent;
             }
 
             if( cardData._color == _opponentCards[num]._color )
             {
                 _opponentCardPriority[num] += 15;
-                _opponentFields[fieldNum]   = fieldParent.gameObject;
+                _targetField[num] = fieldParent;
             }
         }
     }
@@ -153,8 +159,6 @@ public class AI : MonoBehaviour
     // フィールドに2枚
     private void SetPriorityCardTwo( CardData[] cardDatas )
     {
-        string parentName = cardDatas[0].transform.parent.name.Remove( 0, 13 );
-        int fieldNum = int.Parse( parentName );
         Transform fieldParent = cardDatas[0].transform.parent;
 
         if( cardDatas[1]._number < cardDatas[0]._number )
@@ -170,14 +174,14 @@ public class AI : MonoBehaviour
             &&  ( _opponentCards[num]._number == cardDatas[1]._number+1 )
             ){
                 _opponentCardPriority[num] += 40;
-                _opponentFields[fieldNum]   = fieldParent.gameObject;
+                _targetField[num] = fieldParent;
             }
 
             if( ( _opponentCards[num]._number == cardDatas[0]._number )
             &&  ( _opponentCards[num]._number == cardDatas[1]._number )
             ){
                 _opponentCardPriority[num] += 35;
-                _opponentFields[fieldNum]   = fieldParent.gameObject;
+                _targetField[num]   = fieldParent;
             }
 
             if( cardDatas[0]._number == cardDatas[1]._number+1 )
@@ -186,7 +190,7 @@ public class AI : MonoBehaviour
                 ||  ( _opponentCards[num]._number == cardDatas[1]._number+1 )
                 ){
                     _opponentCardPriority[num] += 30;
-                    _opponentFields[fieldNum]   = fieldParent.gameObject;
+                    _targetField[num] = fieldParent;
                 }
             }
 
@@ -194,11 +198,13 @@ public class AI : MonoBehaviour
             &&  ( _opponentCards[num]._color == cardDatas[1]._color )
             ){
                 _opponentCardPriority[num] += 25;
-                _opponentFields[fieldNum]   = fieldParent.gameObject;
+                _targetField[num] = fieldParent;
             }
         }
     }
 
+
+    // 優先度に従ってカードを選ぶ
     private void ChooseCard()
     {
         int priorityNum = 0;
@@ -211,7 +217,24 @@ public class AI : MonoBehaviour
             }
         }
 
-        _opponentCards[priorityNum].transform.parent = _opponentFields[priorityNum].transform;
+        if( _targetField[priorityNum].childCount == 2 )
+        {
+            _ableFieldNum--;
+            GameObject field = _targetField[priorityNum].gameObject;
+            GameObject[] fields = _opponentFields;
+            _opponentFields = new GameObject[_ableFieldNum];
+            int fieldNum = 0;
+
+            for( int num = 0; num <= _opponentFields.Length; num++ )
+            {
+                if( fields[num] != field )
+                {
+                    _opponentFields[fieldNum++] = fields[num];
+                }
+            }
+        }
+
+        _opponentCards[priorityNum].transform.parent = _targetField[priorityNum].transform;
 
         if( _cardManager.GetStrageTopNum() < _cardManager.GetMaxNum() )
         {
@@ -229,7 +252,7 @@ public class AI : MonoBehaviour
             {
                 if( cardData != cardDatas[num] )
                 {
-                    _opponentCards[cardsNum] = cardDatas[num];
+                    _opponentCards[cardsNum++] = cardDatas[num];
                 }
             }
         }
